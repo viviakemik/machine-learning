@@ -162,6 +162,156 @@ def generate_sell(merged_data_1,close_col,open_col):
     merged_data.drop(columns=['Buy_sell_fill'], inplace=True)
     return merged_data
 
+def generate_buy_pivot_exit(merged_data_1,close_col,open_col):
+    merged_data = merged_data_1.copy(deep=True)
+
+    merged_data['Buy_sell'] = np.where((((merged_data[close_col].shift(1) < merged_data['S3']) & (
+                merged_data[close_col] > merged_data['S3']) & (merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['S2']) & (
+                                                    merged_data[close_col] > merged_data['S2']) & (
+                                                     merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['S1']) & (
+                                                    merged_data[close_col] > merged_data['S1']) & (
+                                                     merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['Pivot']) & (
+                                                    merged_data[close_col] > merged_data['Pivot']) & (
+                                                     merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['R1']) & (
+                                                    merged_data[close_col] > merged_data['R1']) & (
+                                                     merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['R2']) & (
+                                                    merged_data[close_col] > merged_data['R2']) & (
+                                                     merged_data[close_col] > merged_data[open_col])) |
+                                        ((merged_data[close_col].shift(1) < merged_data['R3']) & (
+                                                    merged_data[close_col] > merged_data['R3']) & (
+                                                     merged_data[close_col] > merged_data[open_col]))), 'Buy', None
+                                       )
+
+    merged_data['Profit_exit'] = np.where(merged_data['Buy_sell'] == 'Buy',
+                                          merged_data[close_col] + (merged_data[close_col] * 0.01), None)
+    merged_data['Stoploss_exit'] = np.where(merged_data['Buy_sell'] == 'Buy',
+                                            merged_data[close_col] - (merged_data[close_col] * 0.005), None)
+    merged_data['Stoploss_cpr'] = np.where(
+                                        ((merged_data[close_col].shift(1) < merged_data['S3']) & (
+                                                merged_data[close_col] > merged_data['S3']) & (merged_data['Buy_sell'] == 'Buy')),merged_data['S3'],
+                                        np.where(
+                                            ((merged_data[close_col].shift(1) < merged_data['S2']) & (
+                                                    merged_data[close_col] > merged_data['S2']) & (
+                                                     merged_data['Buy_sell'] == 'Buy')), merged_data['S2'],
+                                            np.where(
+                                                ((merged_data[close_col].shift(1) < merged_data['S1']) & (
+                                                        merged_data[close_col] > merged_data['S1']) & (
+                                                         merged_data['Buy_sell'] == 'Buy')), merged_data['S1'],
+                                                np.where(
+                                                    ((merged_data[close_col].shift(1) < merged_data['Pivot']) & (
+                                                            merged_data[close_col] > merged_data['Pivot']) & (
+                                                             merged_data['Buy_sell'] == 'Buy')), merged_data['Pivot'],
+                                                    np.where(
+                                                        ((merged_data[close_col].shift(1) < merged_data['R1']) & (
+                                                                merged_data[close_col] > merged_data['R1']) & (
+                                                                 merged_data['Buy_sell'] == 'Buy')), merged_data['R1'],
+                                                        np.where(
+                                                            ((merged_data[close_col].shift(1) < merged_data['R2']) & (
+                                                                    merged_data[close_col] > merged_data['R2']) & (
+                                                                     merged_data['Buy_sell'] == 'Buy')), merged_data['R2'],
+                                                            np.where(
+                                                                ((merged_data[close_col].shift(1) < merged_data[
+                                                                    'R3']) & (
+                                                                         merged_data[close_col] > merged_data['R3']) & (
+                                                                         merged_data['Buy_sell'] == 'Buy')),merged_data['R3'],None
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+    )
+
+    merged_data['Buy_sell_fill'] = merged_data['Buy_sell'].ffill()
+    merged_data['Profit_exit'] = merged_data['Profit_exit'].ffill()
+    merged_data['Stoploss_exit'] = merged_data['Stoploss_exit'].ffill()
+    merged_data['Stoploss_cpr'] = merged_data['Stoploss_cpr'].ffill()
+
+    merged_data['Buy_sell'] = np.where(
+        (merged_data['Buy_sell_fill'] == 'Buy')
+        & (merged_data['Buy_sell'] != 'Buy')
+        & ((merged_data[close_col] >= merged_data['Profit_exit'])
+           | (merged_data[close_col] <= merged_data['Stoploss_exit']) | (merged_data[close_col] <= merged_data['Stoploss_cpr'])), 'Buy_SL', merged_data['Buy_sell']
+    )
+    merged_data.dropna(subset=['Buy_sell'], inplace=True)
+    merged_data = merged_data[merged_data['Buy_sell'] != merged_data['Buy_sell'].shift(1)]
+
+    merged_data.drop(columns=['Buy_sell_fill'], inplace=True)
+    return merged_data
+
+def generate_sell_pivot_exit(merged_data_1,close_col,open_col):
+    merged_data = merged_data_1.copy(deep=True)
+
+    merged_data['Buy_sell'] = np.where(
+                                ((merged_data[close_col].shift(1) > merged_data['S3']) & (merged_data[close_col] < merged_data['S3']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['S2']) & (merged_data[close_col] < merged_data['S2']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['S1']) & (merged_data[close_col] < merged_data['S1']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['Pivot']) & (merged_data[close_col] < merged_data['Pivot']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['R1']) & (merged_data[close_col] < merged_data['R1']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['R2']) & (merged_data[close_col] < merged_data['R2']) & (merged_data[close_col] < merged_data[open_col])) |
+                                 ((merged_data[close_col].shift(1) > merged_data['R3']) & (merged_data[close_col] < merged_data['R3']) & (merged_data[close_col] < merged_data[open_col])), 'Sell', None
+    )
+
+    merged_data['Profit_exit'] = np.where(merged_data['Buy_sell'] == 'Sell',
+                                          merged_data[close_col] - (merged_data[close_col] * 0.01),None)
+    merged_data['Stoploss_exit'] = np.where(merged_data['Buy_sell'] == 'Sell',
+                                            merged_data[close_col] + (merged_data[close_col] * 0.005),None)
+
+    merged_data['Stoploss_cpr'] = np.where(
+                                ((merged_data[close_col].shift(1) > merged_data['S3']) & (merged_data[close_col] < merged_data['S3']) & (merged_data['Buy_sell'] == 'Sell')), merged_data['S3'],
+                                np.where( ((merged_data[close_col].shift(1) > merged_data['S2']) & (merged_data[close_col] < merged_data['S2']) & (merged_data['Buy_sell'] == 'Sell')), merged_data['S2'],
+                                          np.where(
+                                              ((merged_data[close_col].shift(1) > merged_data['S1']) & (
+                                                          merged_data[close_col] < merged_data['S1']) & (
+                                                           merged_data['Buy_sell'] == 'Sell')), merged_data['S1'],
+                                              np.where(
+                                                  ((merged_data[close_col].shift(1) > merged_data['Pivot']) & (
+                                                              merged_data[close_col] < merged_data['Pivot']) & (
+                                                               merged_data['Buy_sell'] == 'Sell')), merged_data['Pivot'],
+                                                  np.where(
+                                                      ((merged_data[close_col].shift(1) > merged_data['R1']) & (
+                                                                  merged_data[close_col] < merged_data['R1']) & (
+                                                                   merged_data['Buy_sell'] == 'Sell')), merged_data['R1'],
+                                                      np.where(
+                                                          ((merged_data[close_col].shift(1) > merged_data['R2']) & (
+                                                                      merged_data[close_col] < merged_data['R2']) & (
+                                                                       merged_data['Buy_sell'] == 'Sell')), merged_data['R2'],
+                                                          np.where(
+                                                              ((merged_data[close_col].shift(1) > merged_data['R3']) & (
+                                                                          merged_data[close_col] < merged_data[
+                                                                      'R3']) & (merged_data['Buy_sell'] == 'Sell')), merged_data['R3'],None
+                                                          )
+                                                      )
+                                                  )
+                                              )
+                                          )
+                                          )
+                                )
+
+
+
+    merged_data['Buy_sell_fill'] = merged_data['Buy_sell'].ffill()
+    merged_data['Profit_exit'] = merged_data['Profit_exit'].ffill()
+    merged_data['Stoploss_exit'] = merged_data['Stoploss_exit'].ffill()
+    merged_data['Stoploss_cpr'] = merged_data['Stoploss_cpr'].ffill()
+
+    merged_data['Buy_sell'] = np.where(
+        (merged_data['Buy_sell_fill'] == 'Sell')
+        & (merged_data['Buy_sell'] != 'Sell')
+        & ((merged_data[close_col] <= merged_data['Profit_exit'])
+        | (merged_data[close_col] >= merged_data['Stoploss_exit']) | (merged_data[close_col] >= merged_data['Stoploss_cpr'])), 'Sell_SL', merged_data['Buy_sell']
+    )
+
+    merged_data.dropna(subset=['Buy_sell'], inplace=True)
+    merged_data = merged_data[merged_data['Buy_sell'] != merged_data['Buy_sell'].shift(1)]
+    merged_data.drop(columns=['Buy_sell_fill'], inplace=True)
+    return merged_data
+
 
 def get_pnl(pnl_data,col_close):
     pnl_data['PNL'] = np.where(pnl_data['Buy_sell'] == 'Buy_SL',pnl_data[col_close] - pnl_data[col_close].shift(-1),
