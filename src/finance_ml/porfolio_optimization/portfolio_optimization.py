@@ -23,13 +23,10 @@ from cvxopt import blas, solvers
 
 
 class PortfolioOptimization:
-    def __init__(self,
-                 data_train: pd.core.frame.DataFrame,
-                 data_test: pd.core.frame.DataFrame,
-                 correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda
-                         corr: ((1 - corr) / 2.) ** .5,
-                 drop_null: bool = False,
-                 ):
+    def __init__(self, data_train: pd.core.frame.DataFrame, data_test: pd.core.frame.DataFrame,
+                 correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda corr: ((
+                                                                                                                   1 - corr) / 2.) ** .5,
+                 drop_null: bool = False):
         """
         Initialize data.
 
@@ -233,3 +230,47 @@ class PortfolioOptimization:
         stddev = result_df.std() * np.sqrt(252)
         sharp_ratio = (result_df.mean() * np.sqrt(252)) / result_df.std()
         return pd.DataFrame(dict(stdev=stddev, sharp_ratio=sharp_ratio))
+
+    def hrp_MC(self, num_iters=1e4, shift_count=5, rebal=22):
+        s_length = int(self.data_train.shape[0] / shift_count)
+        print(s_length)
+        methods = [self.get_IVP, self.get_HRP, self.get_CLA]
+        stats, num_iter = {i.__name__: pd.Series() for i in methods}, 0
+        pointers = range(s_length, self.data_train.shape[1], rebal)
+
+        while num_iter < num_iters:
+            print(num_iter, "now", num_iter + s_length)
+            # 1) Prepare data for one experiment
+            x = self.data_train.iloc[num_iter:num_iter + s_length]
+            r = {i.__name__: pd.Series() for i in methods}
+
+            # 2) Compute portfolios in-sample
+            for pointer in pointers:
+                x_ = x[pointer - s_length:pointer]
+                cov_, corr_ = np.cov(x_, rowvar=0), np.corrcoef(x_, rowvar=0)
+                self.cov = cov_
+                self.corr = corr_
+                # 3) Compute performance out-of-sample
+                x_ = x[pointer:pointer + rebal]
+                for func in methods:
+                    w_ = func()  # callback
+                    r_ = pd.Series(np.dot(x_, w_))
+                    r[func.__name__] = r[func.__name__].append(r_)
+
+            # 4) Evaluate and store results
+            for func in methods:
+                r_ = r[func.__name__].reset_index(drop=True)
+                p_ = (1 + r_).cumprod()
+                stats[func.__name__].loc[num_iter] = p_.iloc[-1] - 1  # terminal return
+
+            num_iter += 1
+
+        # 5) Report results
+        stats = pd.DataFrame.from_dict(stats, orient='columns')
+        stats.to_csv('stats.csv')
+
+        df0, df1 = stats.std(), stats.var()
+        result_df = pd.concat([df0, df1, df1 / df1['getHRP'] - 1], axis=1)
+        print(result_df)
+
+        return result_df
