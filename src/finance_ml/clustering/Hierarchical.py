@@ -12,86 +12,119 @@ __all__ = [
 
 class Hierarchical:
     def __init__(self, dataset, labels, interval=24):
-        # if interval is set to 1 or less, sliding window is skipped
+        '''
+        Initialize the Hierarchical object for stock data analysis.
+
+        Args:
+        -----
+        dataset : pandas.DataFrame
+            The dataset containing stock prices or returns.
+        labels : list of str
+            The labels for each column in the dataset, typically stock names.
+        interval : int, optional
+            The window interval for sliding window calculations, defaults to 24.
+        '''
+
         self.interval = interval
         self.dataset = dataset
         self.labels = labels
 
-        # After applying sliding window
+        # DataFrames to store various calculated values
         self.returns_df = None
         self.segment_std_df = None
-        self.sherpe_ratio_df = None
+        self.sharpe_ratio_df = None
 
-        # dendogram related information
+        # Dendrogram related information
         self.data_linkage = None
 
-    def preprocessing(self, fillna_with='dropna', inplace=True,
-                      standardized_returns=True, standardized_risks=True, standardized_sherpe_ratio=True):
-        # possible values for fillna is ffill - forward fill , bfill - backward fill, 0 - for fixed fill
-        # Handling NaNs
-        # More advanced duplicate handling might require custom logic
-        # dropping na will give the most performance if we are using the complete asset information
-        # fillna may creating issue while assigning memory, as memory requirement may go in 10s of TB
-        # df.fillna(method='ffill', inplace=True)  # Forward fill
-        # df.fillna(method='bfill', inplace=True)  # Backward fill
-        # df.fillna(0, inplace=True)               # Fill with a specific value like 0
-        # df.interpolate(inplace=True)             # Interpolation
-        # Handling duplicates
+    def preprocessing(self, fillna_method='dropna', inplace=True,
+                      standardize_returns=True, standardize_risks=True, standardize_sharpe_ratio=True):
+        '''
+        Preprocesses the dataset by handling missing values, removing duplicates,
+        applying sliding window, and standardizing data.
+
+        Args:
+        -----
+        fillna_method : str, optional
+            Method for handling missing values. Options are 'dropna' (default),
+            'ffill', 'bfill', or a numeric value for fixed fill.
+        inplace : bool, optional
+            Whether to modify the dataset in place. Defaults to True.
+        standardize_returns : bool, optional
+            Whether to standardize returns data. Defaults to True.
+        standardize_risks : bool, optional
+            Whether to standardize risks data. Defaults to True.
+        standardize_sharpe_ratio : bool, optional
+            Whether to standardize Sharpe ratio data. Defaults to True.
+        '''
 
         self.dataset.drop_duplicates(inplace=inplace)
-
-        print(self.dataset.shape)
-        if fillna_with == 'dropna':
+        if fillna_method == 'dropna':
             self.dataset.dropna(inplace=inplace)
-        elif fillna_with == 'ffill' or fillna_with == 'bfill':
-            self.dataset.fillna(method=fillna_with, inplace=inplace)
-        elif fillna_with.isnumeric():
-            self.dataset.fillna(method=int(fillna_with), inplace=inplace)
+        elif fillna_method in ['ffill', 'bfill']:
+            self.dataset.fillna(method=fillna_method, inplace=inplace)
+        elif fillna_method.isnumeric():
+            self.dataset.fillna(method=int(fillna_method), inplace=inplace)
 
-        ## todo implement resample
-        ## todo give another option to set the duplicates with group by mean value
         if self.interval > 1:
             self.apply_sliding_window(self.dataset, self.interval)
 
-        if standardized_returns:
-            self.returns_df = self.standardized_dataset(self.returns_df)
-        if standardized_risks:
-            self.segment_std_df = self.standardized_dataset(self.segment_std_df)
-        if standardized_sherpe_ratio:
-            self.sherpe_ratio_df = self.standardized_dataset(self.sherpe_ratio_df)
+        if standardize_returns:
+            self.returns_df = self.standardize_dataset(self.returns_df)
+        if standardize_risks:
+            self.segment_std_df = self.standardize_dataset(self.segment_std_df)
+        if standardize_sharpe_ratio:
+            self.sharpe_ratio_df = self.standardize_dataset(self.sharpe_ratio_df)
 
     def apply_sliding_window(self, dataset, interval=24):
-        # Create a copy of the DataFrame to store results
-        # This copy will have fewer rows lens = t.rows - interval + 1
-        self.returns_df = pd.DataFrame(index=range(self.dataset.shape[0] - interval + 1))
-        self.sherpe_ratio_df = pd.DataFrame(index=range(self.dataset.shape[0] - interval + 1))
-        self.segment_std_df = pd.DataFrame(index=range(self.dataset.shape[0] - interval + 1))
+        '''
+        Applies a sliding window to the dataset and calculates returns, risks,
+        and Sharpe ratios for each window.
 
-        # Iterate through each column in the DataFrame
-        for column in self.dataset.columns:
-            # Apply sliding window
-            segmented = sliding_window_view(self.dataset[column], interval, axis=0)
+        Args:
+        -----
+        dataset : pandas.DataFrame
+            The dataset on which the sliding window is to be applied.
+        interval : int, optional
+            The window interval for sliding window calculations, defaults to 24.
+        '''
 
+        self.returns_df = pd.DataFrame(index=range(dataset.shape[0] - interval + 1))
+        self.sharpe_ratio_df = pd.DataFrame(index=range(dataset.shape[0] - interval + 1))
+        self.segment_std_df = pd.DataFrame(index=range(dataset.shape[0] - interval + 1))
+
+        for column in dataset.columns:
+            segmented = sliding_window_view(dataset[column], interval, axis=0)
             if segmented.size == 0:
                 continue
-
-            # Calculating the returns in each segment
             segment_returns = segmented[:, 0] - segmented[:, -1]
-            self.returns_df[f'{column}'] = segment_returns
-
-            # Calculating risk (standard deviation) in each segment
             segment_std = np.std(segmented, axis=1)
-            self.segment_std_df[f'{column}'] = segment_std
-
-            # Calculating Sharpe ratios
             sharpe_ratio = np.divide(segment_returns, segment_std, out=np.zeros_like(segment_returns),
                                      where=segment_std != 0)
-            self.sherpe_ratio_df[f'{column}'] = sharpe_ratio
 
-    def standardized_dataset(self, dataset):
+            self.returns_df[column] = segment_returns
+            self.segment_std_df[column] = segment_std
+            self.sharpe_ratio_df[column] = sharpe_ratio
+
+    def standardize_dataset(self, dataset):
+        '''
+        Standardizes the given dataset using StandardScaler.
+
+        Args:
+        -----
+        dataset : pandas.DataFrame
+            The dataset to be standardized.
+
+        Returns:
+        -----
+        pandas.DataFrame
+            The standardized dataset.
+        '''
+
         scaler = StandardScaler()
         scaled_df = pd.DataFrame(scaler.fit_transform(dataset), columns=dataset.columns, index=dataset.index)
         return scaled_df
+
 
     def find_linkage(self, df, plot_dendogram=True, method='ward'):
         ## todo find and add other methods
