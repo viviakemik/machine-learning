@@ -1887,10 +1887,16 @@ class Indicators(BaseEstimator, TransformerMixin):
 
 
     def __cal_SUPERTREND(self):
+        print(self.__data)
+        print(self.__col_low)
+        print(self.__col_high)
+        print(self.__col_close)
+
         indicator_SUPERTREND = ta.supertrend(high=self.__data[self.__col_high], low=self.__data[self.__col_low],
                                       close=self.__data[self.__col_close], length=self.__SUPERTREND_length,
                                       multiplier=self.__SUPERTREND_multiplier
                                       )
+        print(indicator_SUPERTREND)
 
         self.__data[self.__ticker + "SUPERTREND_trend"] = indicator_SUPERTREND['SUPERT_7_3.0'].values
         self.__data[self.__ticker + "SUPERTREND_Direction"] = indicator_SUPERTREND['SUPERTd_7_3.0'].values
