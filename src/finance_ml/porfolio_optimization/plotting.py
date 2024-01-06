@@ -5,6 +5,12 @@ from scipy.cluster.hierarchy import dendrogram
 
 
 def show_pie_charts(portfolios: pd.DataFrame) -> None:
+    """
+        Util function for plotting pie charts of all given portfolios showing their weights to the assets.
+
+        Args:
+            portfolios (pandas DataFrame): dataframe of portfolio weights
+    """
     if type(portfolios) != pd.DataFrame:
         raise ValueError(
             f'Function show_pie_charts - Parameter portfolios has to be of type'
@@ -20,6 +26,13 @@ def show_pie_charts(portfolios: pd.DataFrame) -> None:
 
 
 def show_dendogram(link: np.ndarray or np.array, labels: tuple or list or pd.Index) -> None:
+    """
+        Util function for plotting the dendogram of the given assets and their linkage.
+
+        Args:
+            link (numpy array): array determining the linkage of the assets
+            labels (list): labels for the assets to show in the dendogram
+    """
     if type(link) not in [np.ndarray, np.array]:
         raise ValueError(f'Function show_dendogram - Parameter link has to be of type '
                          f'numpy.array or numpy.ndarray, but got type {type(link)}')
@@ -39,6 +52,13 @@ def show_dendogram(link: np.ndarray or np.array, labels: tuple or list or pd.Ind
 
 
 def show_result_plot(result_df: pd.DataFrame, title: str = "") -> None:
+    """
+        Util function for plotting in or out of sample results for visualization.
+
+        Args:
+            result_df (pandas DataFrame): dataframe of results
+            title (str): Title of the plot
+    """
     if type(result_df) != pd.DataFrame:
         raise ValueError(
             f'HierarchRiskParity Class - method show_result_plot - Parameter result_df has to be of type'
