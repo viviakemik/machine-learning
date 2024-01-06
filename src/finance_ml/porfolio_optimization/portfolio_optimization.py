@@ -24,18 +24,24 @@ from cvxopt import blas, solvers
 
 class PortfolioOptimization:
     def __init__(self, data_train: pd.core.frame.DataFrame, data_test: pd.core.frame.DataFrame,
-                 correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda corr: ((
-                                                                                                                   1 - corr) / 2.) ** .5,
+                 correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda corr: (
+                                                                                                                  (
+                                                                                                                          1 - corr) / 2.) ** .5,
                  drop_null: bool = False):
         """
-        Initialize data.
+        Initialize data for portfolio optimization currently including
+            - Hierarchical Risk Parity (HRP)
+            - Inverse Variance Portfolio (IVP)
+            - Critical Line Algorithm (CLA)
 
         Args:
-            data_train: The data that should be used for training,
-            data_test: The data that should be used for testing,
-            correl_dist(optional): The distance that should be used for correlation matrix, defaults to sqrt((1-corr)/2)
-            drop_null(optional): If rows with null/n.a. values in the data should be discarded. If False but null/n.a.
-                                value exists in the data, an error occurs
+            data_train (pandas DataFrame): The data that should be used for training,
+            data_test (pandas DataFrame): The data that should be used for testing,
+            optional: correl_dist(function (pandas DataFrame) -> pandas DataFrame): The distance that should be used
+                                for correlation matrix, defaults to sqrt((1-corr)/2)
+            optional: drop_null(bool): If rows with null/n.a. values in the data should be discarded. If False but null/n.a.
+                                value exists in the data, an error occurs. You should consider cleaning the data before
+                                calling this function.
         """
         # First check that all the inputs are in the correct formats and don't contain null/n.a. values
         if type(data_train) != pd.core.frame.DataFrame:
@@ -101,6 +107,13 @@ class PortfolioOptimization:
         self.corr = corr
 
     def calc_linkage(self, method: str) -> np.ndarray:
+        """
+            Calculate the linkage which calculates the cluster tree by comparing and optimizing distances
+            between different stocks
+
+            Args:
+                method (str): Parameter passed down to the linkage function from scipy, e.g. 'single'
+        """
         if type(method) != str:
             raise ValueError(f'HierarchRiskParity Class - Calculated parameter method must be str,'
                              f' got type {type(method)}')
@@ -109,6 +122,12 @@ class PortfolioOptimization:
         return sch.linkage(condensed_corr_dist, method)
 
     def get_quasi_diag(self) -> list:
+        """
+            Get the quasi diagonalized linking/clustering matrix for hierarchical risk parity (HRP). This reordering of
+            the assets places similar assets together and dissimilar assets are placed far apart.
+
+            Returns a list of indices.
+        """
         link = self.calc_linkage('single')
         # Sort clustered items by distance
         link = link.astype(int)
@@ -126,17 +145,31 @@ class PortfolioOptimization:
             sortIx.index = range(sortIx.shape[0])  # re-index
         return sortIx.tolist()
 
-    def get_cluster_var(self, cItems: list or pd.Index) -> np.ndarray:
-        if type(cItems) not in [list, pd.Index]:
+    def get_cluster_var(self, c_items: list or pd.Index) -> np.ndarray:
+        """
+            Sub-method of the recursive bisection of the hierarchical risk parity (HRP). Takes a list of indices of a
+            cluster and calculates and returns its variance.
+
+            Args:
+                c_items (list or pandas Index): Indices of a cluster, "cluster_items"
+        """
+        if type(c_items) not in [list, pd.Index]:
             raise ValueError(f'HierarchRiskParity Class - method get_cluster_var - Parameter cItems has to be of type '
-                             f'list or pandas.core.indexes.base.Index, but got type {type(cItems)}')
+                             f'list or pandas.core.indexes.base.Index, but got type {type(c_items)}')
         # Compute variance per cluster
-        cov_ = self.cov.loc[cItems, cItems]  # matrix slice
+        cov_ = self.cov.loc[c_items, c_items]  # matrix slice
         w_ = self.get_IVP(cov_).array.reshape(-1, 1)
         c_var = np.dot(np.dot(w_.T, cov_), w_)[0, 0]
         return c_var
 
     def get_rec_bipart(self, sort_ix: list or pd.Index) -> pd.Series:
+        """
+            Perform the recursive bisection of the hierarchical risk parity (HRP). HRP now takes advantage of the
+            quasi-diagonalization to calculate the individual asset weights.
+
+            Args:
+                sort_ix (list or pandas Index): The sorted indices from the quasi diagonalization.
+        """
         if type(sort_ix) not in [list, pd.Index]:
             raise ValueError(f'HierarchRiskParity Class - method get_rec_bipart - Parameter sortIx has to be of type '
                              f'list or pandas.core.indexes.base.Index, but got type {type(sort_ix)}')
@@ -157,6 +190,9 @@ class PortfolioOptimization:
         return w
 
     def get_CLA(self) -> pd.Series:
+        """
+            Calculate and return the portfolio that is optimal in terms of the critical line algorithm (CLA).
+        """
         N = 100
         mus = [10 ** (5.0 * t / N - 1.0) for t in range(N)]
 
@@ -189,6 +225,13 @@ class PortfolioOptimization:
         return pd.Series(list(wt), index=self.cov.index)
 
     def get_IVP(self, cov: pd.DataFrame = None) -> pd.Series:
+        """
+            Calculate and return the portfolio that is optimal in terms of the inverse variance portfolio (IVP).
+
+            Args:
+                cov (pandas DataFrame): optional covariance matrix, e.g. needed if IVP should be calculated for
+                                        different clusters in HRP, defaults to IVP of whole training data
+        """
         if cov is None:
             cov = self.cov
         # Compute the inverse-variance portfolio
@@ -197,6 +240,9 @@ class PortfolioOptimization:
         return pd.Series(ivp, index=cov.index)
 
     def get_HRP(self) -> pd.Series:
+        """
+            Calculate and return the portfolio that is optimal in terms of the hierarchical risk parity (HRP).
+        """
         # Construct a hierarchical portfolio
         sortIx = self.get_quasi_diag()
         sortIx = self.corr.index[sortIx].tolist()
@@ -204,6 +250,12 @@ class PortfolioOptimization:
         return hrp.sort_index()
 
     def get_all_portfolios(self) -> pd.DataFrame:
+        """
+            Calculate and return all three currently available portfolio strategies:
+                - Hierarchical Risk Parity (HRP)
+                - Inverse Variance Portfolio (IVP)
+                - Critical Line Algorithm (CLA)
+        """
         cla = self.get_CLA()
         ivp = self.get_IVP()
         hrp = self.get_HRP()
@@ -211,6 +263,12 @@ class PortfolioOptimization:
         return portfolios
 
     def get_results(self, portfolios: pd.DataFrame) -> [pd.DataFrame, pd.DataFrame]:
+        """
+            Calculate and return the in sample and out of sample results for given portfolios.
+
+            Args:
+                portfolios (pandas DataFrame): dataframe of one or more portfolios
+        """
         if type(portfolios) != pd.DataFrame:
             raise ValueError(
                 f'HierarchRiskParity Class - method get_results - Parameter portfolios has to be of type'
@@ -223,6 +281,12 @@ class PortfolioOptimization:
         return [in_sample_result, out_of_sample_result]
 
     def get_stdev_and_sharpe_ratio(self, result_df: pd.DataFrame) -> pd.DataFrame:
+        """
+            Calculate and return the standard deviation and sharpe ratio for given results.
+
+            Args:
+                result_df (pandas DataFrame): dataframe of results of one or more portfolio applications
+        """
         if type(result_df) != pd.DataFrame:
             raise ValueError(
                 f'HierarchRiskParity Class - method show_result_plot - Parameter result_df has to be of type'
@@ -232,14 +296,22 @@ class PortfolioOptimization:
         return pd.DataFrame(dict(stdev=stddev, sharp_ratio=sharp_ratio))
 
     def hrp_MC(self, num_iters=1e4, shift_count=5, rebal=22):
+        """
+            Todo: The following code was taken from Marcos Lopez book and is not yet working fully, it still needs
+             some work but the ground work of code is already implemented below.
+            Calculate Monte Carlo experiment for hierarchical risk parity (HRP) to see portfolio shifts of HRP.
+
+            Args (optional, defaults available):
+                num_iters (int): Number of iterations for Monte Carlo
+                shift_count (int): Number of portfolio shifts during the Monte Carlo iterations
+                rebal (int): Number of portfolio rebalances during the Monte Carlo iterations
+        """
         s_length = int(self.data_train.shape[0] / shift_count)
-        print(s_length)
         methods = [self.get_IVP, self.get_HRP, self.get_CLA]
         stats, num_iter = {i.__name__: pd.Series() for i in methods}, 0
         pointers = range(s_length, self.data_train.shape[1], rebal)
 
         while num_iter < num_iters:
-            print(num_iter, "now", num_iter + s_length)
             # 1) Prepare data for one experiment
             x = self.data_train.iloc[num_iter:num_iter + s_length]
             r = {i.__name__: pd.Series() for i in methods}
@@ -271,6 +343,5 @@ class PortfolioOptimization:
 
         df0, df1 = stats.std(), stats.var()
         result_df = pd.concat([df0, df1, df1 / df1['getHRP'] - 1], axis=1)
-        print(result_df)
 
         return result_df
