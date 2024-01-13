@@ -18,7 +18,6 @@ from datetime import date
 import sys
 sys.path.append('../')
 import os
-
 import pandas_ta as ta
 from data_preparation.data_preparation import DataLoader
 from trading_strategy.pivot_strategy import *

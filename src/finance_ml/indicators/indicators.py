@@ -114,7 +114,7 @@ class Indicators(BaseEstimator, TransformerMixin):
                  VI_win: int = 14,
                  WMA_win: int = 9,
                  SUPERTREND_length: int = 7,
-                 SUPERTREND_multiplier = 3
+                 SUPERTREND_multiplier = 3,
                  HMA_win: int = 9
                  ):
         
