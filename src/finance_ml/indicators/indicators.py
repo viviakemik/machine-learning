@@ -31,6 +31,8 @@ from ta.trend import ADXIndicator, AroonIndicator, CCIIndicator, DPOIndicator, E
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
+import pandas_ta as pta
+
 class Indicators(BaseEstimator, TransformerMixin):
     
     def __init__(self,
@@ -113,6 +115,7 @@ class Indicators(BaseEstimator, TransformerMixin):
                  WMA_win: int = 9,
                  SUPERTREND_length: int = 7,
                  SUPERTREND_multiplier = 3
+                 HMA_win: int = 9
                  ):
         
         """
@@ -198,6 +201,7 @@ class Indicators(BaseEstimator, TransformerMixin):
             TRIX_win (int): n period for Trix Indicator
             VI_win (int): n period for Vortex Indicator
             WMA_win (int): n period for Weighted Moving Average
+            HMA_win (int): n period for Hull Moving Average
 
         Returns:
             None
@@ -207,7 +211,7 @@ class Indicators(BaseEstimator, TransformerMixin):
                     'KAMA', 'PPO', 'PVO', 'ROC', 'RSI', 'STRSI', 'SO', 'AOI', \
                     'TSI', 'UO', 'WRI', 'ADI', 'CMF', 'EOM', 'FI', 'MFI', 'NVI', \
                     'OBV', 'VPT', 'VWAP', 'ADX', 'AROON', 'CCI', 'DPO', 'EMA', 'SMA', \
-                    'ICHI', 'KST', 'MACD', 'MI', 'PSAR', 'STC', 'TRIX', 'VI', 'WMA','SUPERTREND']
+                    'ICHI', 'KST', 'MACD', 'MI', 'PSAR', 'STC', 'TRIX', 'VI', 'WMA','SUPERTREND','HMA']
         SCALE_METHODS = ['MINMAX', 'STANDARD']
 
         if (type(calc_all) != bool):
@@ -442,6 +446,9 @@ class Indicators(BaseEstimator, TransformerMixin):
 
         if (type(WMA_win) != int) | (WMA_win <= 0):
             raise ValueError('Indicators Class - Parameter WMA_win must be int, positive')
+        
+        if (type(HMA_win) != int) | (HMA_win <= 0):
+            raise ValueError('Indicators Class - Parameter HMA_win must be int, positive')
 
         self.__ticker = (ticker+'_' if ticker!='' else '')
         self.__col_open = self.__ticker + col_open
@@ -528,6 +535,8 @@ class Indicators(BaseEstimator, TransformerMixin):
         self.__WMA_win = WMA_win
         self.__SUPERTREND_length = SUPERTREND_length
         self.__SUPERTREND_multiplier = SUPERTREND_multiplier
+        self.__HMA_win = HMA_win
+
             
     @property
     def data(self) -> pd.DataFrame(dtype=float):
@@ -1886,6 +1895,7 @@ class Indicators(BaseEstimator, TransformerMixin):
         self.__data[self.__ticker+"WMA_"+field_nm] = indicator_WMA.wma().values
 
 
+
     def __cal_SUPERTREND(self):
         print(self.__data)
         print(self.__col_low)
@@ -1903,6 +1913,35 @@ class Indicators(BaseEstimator, TransformerMixin):
         self.__data[self.__ticker + "SUPERTREND_Long"] = indicator_SUPERTREND['SUPERTl_7_3.0'].values
         self.__data[self.__ticker + "SUPERTREND_Short"] = indicator_SUPERTREND['SUPERTs_7_3.0'].values
 
+    
+    def __cal_HMA(self) -> None:
+        """
+        Based on TA Technical Analysis Library in Python from Dario Lopez Padial (Bukosabino)
+            https://github.com/bukosabino/ta/blob/master/docs/index.rst
+        
+        Calculates HMA - Hull Moving Average. It is calculated over "CLOSE" 
+            prices passed in "col_close", "HMA_win" creating new columns named 
+            "HMA_"+HMA_win in the data-frame passed  as argument. 
+            For compatibility purposes, it was added the ticker label in front 
+            of all columns created.
+            
+        Args:
+            None.        
+
+        Returns:
+            None.
+
+        """
+        values = self.__data[self.__col_close].values
+        df_wrk = pd.DataFrame(values)
+        df_wrk.columns = ["close"]
+        
+        # Initialize Stochastic RSI Indicator
+        indicator_HMA = pta.hma(df_wrk['close'], length=self.__HMA_win, append=True)
+
+        field_nm = f'w{self.__HMA_win:02d}'
+        self.__data[self.__ticker+"HMA_"+field_nm] = indicator_HMA.values
+        
     #========================================================================================
     def calculate_indicators (self):
         """
@@ -2050,6 +2089,9 @@ class Indicators(BaseEstimator, TransformerMixin):
 
         if (self.__calc_all) | ('WMA' in self.__list_ind):
             self.__cal_WMA()
+
+        if (self.__calc_all) | ('HMA' in self.__list_ind):
+            self.__cal_HMA()
 
     def normalize_data(self):
         """
