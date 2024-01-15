@@ -23,11 +23,14 @@ from cvxopt import blas, solvers
 
 
 class PortfolioOptimization:
-    def __init__(self, data_train: pd.core.frame.DataFrame, data_test: pd.core.frame.DataFrame,
-                 correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda corr: (
-                                                                                                                  (
-                                                                                                                          1 - corr) / 2.) ** .5,
-                 drop_null: bool = False):
+    def __init__(
+            self,
+            data_train: pd.core.frame.DataFrame,
+            data_test: pd.core.frame.DataFrame,
+            correl_dist: Callable[[pd.core.frame.DataFrame], pd.core.frame.DataFrame] = lambda corr: ((
+                                                                                                              1 - corr) / 2.) ** .5,
+            drop_null: bool = False,
+    ):
         """
         Initialize data for portfolio optimization currently including
             - Hierarchical Risk Parity (HRP)
@@ -145,7 +148,7 @@ class PortfolioOptimization:
             sortIx.index = range(sortIx.shape[0])  # re-index
         return sortIx.tolist()
 
-    def get_cluster_var(self, c_items: list or pd.Index) -> np.ndarray:
+    def get_cluster_var(self, c_items: list or pd.Index) -> np.ndarray or np.float:
         """
             Sub-method of the recursive bisection of the hierarchical risk parity (HRP). Takes a list of indices of a
             cluster and calculates and returns its variance.
