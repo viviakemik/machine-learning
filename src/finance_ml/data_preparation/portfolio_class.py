@@ -1,6 +1,13 @@
 import pandas as pd
 from typing import List
-from src.finance_ml.data_preparation.asset_class import Asset
+try:
+    from src.finance_ml.data_preparation.asset_class import Asset
+    from src.finance_ml.data_preparation.asset_class import Asset
+except Exception as e:
+    import sys
+    sys.path.append('../')
+    from src.finance_ml.data_preparation.asset_class import Asset
+    from src.finance_ml.data_preparation.asset_class import Asset
 
 class Portfolio:
     def __init__(self,

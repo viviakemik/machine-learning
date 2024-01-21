@@ -14,6 +14,7 @@ Updated: July 27th
 # Import required packages
 import pandas as pd
 import numpy as np
+import pandas_ta as ta
 
 import math
 
@@ -112,6 +113,8 @@ class Indicators(BaseEstimator, TransformerMixin):
                  TRIX_win: int = 15,
                  VI_win: int = 14,
                  WMA_win: int = 9,
+                 SUPERTREND_length: int = 7,
+                 SUPERTREND_multiplier = 3,
                  HMA_win: int = 9
                  ):
         
@@ -208,7 +211,7 @@ class Indicators(BaseEstimator, TransformerMixin):
                     'KAMA', 'PPO', 'PVO', 'ROC', 'RSI', 'STRSI', 'SO', 'AOI', \
                     'TSI', 'UO', 'WRI', 'ADI', 'CMF', 'EOM', 'FI', 'MFI', 'NVI', \
                     'OBV', 'VPT', 'VWAP', 'ADX', 'AROON', 'CCI', 'DPO', 'EMA', 'SMA', \
-                    'ICHI', 'KST', 'MACD', 'MI', 'PSAR', 'STC', 'TRIX', 'VI', 'WMA', 'HMA']
+                    'ICHI', 'KST', 'MACD', 'MI', 'PSAR', 'STC', 'TRIX', 'VI', 'WMA','SUPERTREND','HMA']
         SCALE_METHODS = ['MINMAX', 'STANDARD']
 
         if (type(calc_all) != bool):
@@ -530,7 +533,10 @@ class Indicators(BaseEstimator, TransformerMixin):
         self.__TRIX_win = TRIX_win
         self.__VI_win = VI_win
         self.__WMA_win = WMA_win
+        self.__SUPERTREND_length = SUPERTREND_length
+        self.__SUPERTREND_multiplier = SUPERTREND_multiplier
         self.__HMA_win = HMA_win
+
             
     @property
     def data(self) -> pd.DataFrame(dtype=float):
@@ -1888,6 +1894,25 @@ class Indicators(BaseEstimator, TransformerMixin):
         field_nm = f'w{self.__WMA_win:02d}'
         self.__data[self.__ticker+"WMA_"+field_nm] = indicator_WMA.wma().values
 
+
+
+    def __cal_SUPERTREND(self):
+        print(self.__data)
+        print(self.__col_low)
+        print(self.__col_high)
+        print(self.__col_close)
+
+        indicator_SUPERTREND = ta.supertrend(high=self.__data[self.__col_high], low=self.__data[self.__col_low],
+                                      close=self.__data[self.__col_close], length=self.__SUPERTREND_length,
+                                      multiplier=self.__SUPERTREND_multiplier
+                                      )
+        print(indicator_SUPERTREND)
+
+        self.__data[self.__ticker + "SUPERTREND_trend"] = indicator_SUPERTREND['SUPERT_7_3.0'].values
+        self.__data[self.__ticker + "SUPERTREND_Direction"] = indicator_SUPERTREND['SUPERTd_7_3.0'].values
+        self.__data[self.__ticker + "SUPERTREND_Long"] = indicator_SUPERTREND['SUPERTl_7_3.0'].values
+        self.__data[self.__ticker + "SUPERTREND_Short"] = indicator_SUPERTREND['SUPERTs_7_3.0'].values
+
     
     def __cal_HMA(self) -> None:
         """
@@ -1933,6 +1958,9 @@ class Indicators(BaseEstimator, TransformerMixin):
             None.
 
         """
+        if (self.__calc_all) | ('SUPERTREND' in self.__list_ind):
+            self.__cal_SUPERTREND()
+
         if (self.__calc_all) | ('RET' in self.__list_ind):
             self.__cal_return()
             
