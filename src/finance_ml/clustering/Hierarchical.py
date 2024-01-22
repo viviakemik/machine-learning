@@ -9,7 +9,6 @@ __all__ = [
     "Hierarchical",
 ]
 
-
 class Hierarchical:
     def __init__(self, dataset: pd.DataFrame, labels: list, interval: int = 24):
         '''
@@ -24,13 +23,13 @@ class Hierarchical:
                 The window interval for sliding window calculations. Defaults to 24.
                 Set to less than 1 to skip sliding window in preprocessing.
         '''
-        self.interval = interval
-        self.dataset = dataset  # Dataset should be indexed by time.
-        self.labels = labels if labels is not None else dataset.columns.tolist()
+        self.interval:int = interval
+        self.dataset:pd.DataFrame = dataset  # Dataset should be indexed by time.
+        self.labels:list = labels if labels is not None else dataset.columns.tolist()
 
         # DataFrames to store calculated returns and standard deviations (risks)
-        self.returns_df = None
-        self.segment_std_df = None
+        self.returns_df:pd.DataFrame = None
+        self.segment_std_df:pd.DataFrame = None
 
         # Data linkage for dendrogram
         self.data_linkage = None
