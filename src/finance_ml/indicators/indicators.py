@@ -11,27 +11,38 @@ Updated: July 27th
     5. Removed the function '__scale_data()' transferring its duties to 'normalize_data()'
     
 """
+
 # Import required packages
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
 
+
 import math
 
-from ta.momentum import KAMAIndicator, PercentagePriceOscillator, PercentageVolumeOscillator, \
-                ROCIndicator, RSIIndicator, StochRSIIndicator, StochasticOscillator, \
-                AwesomeOscillatorIndicator, TSIIndicator, UltimateOscillator, WilliamsRIndicator
-from ta.volume import AccDistIndexIndicator, ChaikinMoneyFlowIndicator, EaseOfMovementIndicator, \
-                ForceIndexIndicator, MFIIndicator, NegativeVolumeIndexIndicator, \
-                OnBalanceVolumeIndicator, VolumePriceTrendIndicator, VolumeWeightedAveragePrice
-from ta.trend import ADXIndicator, AroonIndicator, CCIIndicator, DPOIndicator, EMAIndicator, \
-                     IchimokuIndicator, KSTIndicator, MACD, MassIndex, PSARIndicator, SMAIndicator, \
-                     STCIndicator, TRIXIndicator, VortexIndicator, WMAIndicator 
-
+import numpy as np
+# Import required packages
+import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from ta.momentum import (AwesomeOscillatorIndicator, KAMAIndicator,
+                         PercentagePriceOscillator, PercentageVolumeOscillator,
+                         ROCIndicator, RSIIndicator, StochasticOscillator,
+                         StochRSIIndicator, TSIIndicator, UltimateOscillator,
+                         WilliamsRIndicator)
+from ta.trend import (MACD, ADXIndicator, AroonIndicator, CCIIndicator,
+                      DPOIndicator, EMAIndicator, IchimokuIndicator,
+                      KSTIndicator, MassIndex, PSARIndicator, SMAIndicator,
+                      STCIndicator, TRIXIndicator, VortexIndicator,
+                      WMAIndicator)
+from ta.volume import (AccDistIndexIndicator, ChaikinMoneyFlowIndicator,
+                       EaseOfMovementIndicator, ForceIndexIndicator,
+                       MFIIndicator, NegativeVolumeIndexIndicator,
+                       OnBalanceVolumeIndicator, VolumePriceTrendIndicator,
+                       VolumeWeightedAveragePrice)
 
-import pandas_ta as pta
+
+
 
 class Indicators(BaseEstimator, TransformerMixin):
     
@@ -1422,7 +1433,7 @@ class Indicators(BaseEstimator, TransformerMixin):
                                      close=df_wrk["close"], window = self.__ADX_win)
 
         field_nm = f'w{self.__ADX_win:02d}'
-        # self.__data[self.__ticker+"ADX_"+field_nm] = indicator_ADX.adx().values   
+        self.__data[self.__ticker+"ADX_"+field_nm] = indicator_ADX.adx().values   
         self.__data[self.__ticker+"ADXP_"+field_nm] = indicator_ADX.adx_pos().values   
         self.__data[self.__ticker+"ADXN_"+field_nm] = indicator_ADX.adx_neg().values   
     
