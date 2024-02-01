@@ -1,3 +1,3 @@
 # __init__.py
 
-from .isolation_forest_AAPL_TSLA import OutlierDetector, load_and_prepare_data
+from .isolation_forest import OutlierDetector, load_and_prepare_data
