@@ -12,7 +12,24 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 
 class PCAModel:
+
+    """A class to perform PCA (Principal Component Analysis) on data and train a regression model."""
+
+
+
     def __init__(self, data_frame, target_column, variance_ratio=0.95, test_size=0.2, random_state=42):
+
+        """
+        Initialize the PCAModel object.
+
+        Parameters:
+        - data_frame (DataFrame): The pandas DataFrame containing the data.
+        - target_column (str): The name of the target column in the DataFrame.
+        - variance_ratio (float): The desired ratio of variance to capture through PCA. Default is 0.95.
+        - test_size (float): The proportion of the dataset to include in the test split. Default is 0.2.
+        - random_state (int): The seed used by the random number generator. Default is 42.
+        """
+
         self.data_frame = data_frame
         self.target_column = target_column
         self.variance_ratio = variance_ratio
@@ -30,6 +47,9 @@ class PCAModel:
         self.error = None
 
     def preprocess_data(self):
+
+        """Preprocess the data by dropping missing values and splitting it into training and testing sets."""
+
         df_pca = self.data_frame.dropna(axis=0)
         X = df_pca.drop(self.target_column, axis=1)
         y = df_pca[self.target_column]
@@ -39,6 +59,9 @@ class PCAModel:
         )
 
     def perform_pca(self):
+
+        """Perform PCA on the training data to reduce dimensionality."""
+
         # Initialize PCA with the number of components set to None
         self.pca = PCA(n_components=None)
 
@@ -61,11 +84,17 @@ class PCAModel:
         self.df_pca = pd.DataFrame(data=self.X_train, columns=column_names_after_pca)
 
     def train_regression_model(self):
+
+        """Train a linear regression model using the PCA-transformed training data."""
+
         # Train a linear regression model
         self.regression_model = LinearRegression()
         self.regression_model.fit(self.X_train, self.y_train)
 
     def evaluate_model(self):
+
+        """Evaluate the performance of the trained regression model."""
+
         # Make predictions on the test set
         y_pred = self.regression_model.predict(self.X_test)
 
@@ -89,6 +118,9 @@ class PCAModel:
         # plt.show()
 
     def print_pca_results(self):
+
+        """Print the results of PCA, including the number of components and explained variance ratio."""
+
         # Print the results of PCA
         print(f"Number of components to capture {self.variance_ratio * 100}% variance: {self.num_components_to_capture}")
         print(f"Explained variance ratio: {np.sum(self.pca.explained_variance_ratio_):.4f}")
@@ -98,6 +130,9 @@ class PCAModel:
 
 
     def check_stationarity(self):
+
+        """Check stationarity of PCA-transformed data using the Augmented Dickey-Fuller test."""
+
         for column_name in self.df_pca.columns:
             # Check stationarity using Augmented Dickey-Fuller test
             result = adfuller(self.df_pca[column_name])
@@ -116,4 +151,3 @@ class PCAModel:
                 print(f'{column_name} may not be stationary.\n')
 
         self.adfresult = result[1]
-
