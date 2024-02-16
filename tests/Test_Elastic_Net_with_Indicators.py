@@ -8,7 +8,8 @@
 
 
 # In[7]:
-
+import sys
+sys.path.append('../')
 
 import pytest
 import pandas as pd

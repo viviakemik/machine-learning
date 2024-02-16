@@ -2,7 +2,8 @@
 # coding: utf-8
 
 # In[4]:
-
+import sys
+sys.path.append('../')
 
 import pandas as pd
 import numpy as np
@@ -22,13 +23,15 @@ class ElasticNetModel:
     def load_data(self):
         print(self.data_file)
         
-        # Load the input Data.
+        #Loading the input Data.
+        #This function accepts the file path and assigns data to dataframe.
         
         self.df = pd.read_parquet(self.data_file)
 
     def clean_data(self):
         
         #Preprocesing/Cleaning the Data.
+        #Missing values and unnecessary columns are handled.
         
         self.df.drop('DATE', axis=1, inplace=True)
         self.df.fillna(0, inplace=True)
@@ -36,6 +39,7 @@ class ElasticNetModel:
     def implement_indicators(self):
         
         #Implementing Indicators to the Data.
+        #We have implemented VWAP and MFI Indicators in this model.
         
         ind = Indicators(ticker='', norm_data=True, calc_all=False, list_ind=["VWAP", "MFI"])
         self.df = ind.fit_transform(self.df)
@@ -51,15 +55,20 @@ class ElasticNetModel:
 
     def train_model(self):
         
-        #Train the ElasticNet model.
+        #Training the ElasticNet model using alpha and l1-ratio. 
+        #A l1_ratio of 1 corresponds to pure Lasso regularization, while a l1_ratio of 0 corresponds to pure Ridge regularization. 
+        #Intermediate values allow for Elastic net regularization.
         
         self.enet = ElasticNet(alpha=0.1, l1_ratio=0.5)
         self.enet.fit(self.x_train, self.y_train)
 
     def evaluate_model(self):
         
-        #Evaluating the performance of the prediction made by ElasticNet model.
-        
+        #Evaluating the performance of the prediction made by ElasticNet model by using:
+        #Mean Squared Error (MSE)
+        #Mean Absolute Error (MAE)
+        #Root Mean Squared Error (RMSE)
+
         y_pred = self.enet.predict(self.x_test)
         mse = mean_squared_error(self.y_test, y_pred)
         mae = mean_absolute_error(self.y_test, y_pred)
@@ -69,7 +78,9 @@ class ElasticNetModel:
     def hyperparameter_tuning(self):
         
         #Evaluation for best estimation hyperparameters.
-        
+        #We have used Grid Search approach to search through different combinations of alpha and l1-ratio.
+        #To find the best combination of alpha and l1-ratio which increases the model's predictive accuracy.
+
         el_net_grid = {'alpha': [0.1, 0.3, 0.5, 0.7, 0.9, 1.0], 'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]}
         elastic_cv = GridSearchCV(self.enet, el_net_grid, cv=3, scoring='neg_mean_squared_error', n_jobs=-1)
         elastic_cv.fit(self.x_train, self.y_train)
@@ -80,26 +91,6 @@ class ElasticNetModel:
         best_estimator = elastic_cv.best_estimator_
         return mse, mae, rmse, best_estimator
 
-if __name__ == "__main__":
-    data_file = './data/real_estate/KBWY_2020-04-07_2022-04-06.parquet'
-    model = ElasticNetModel(data_file)
-    model.load_data()
-    model.clean_data()
-    model.implement_indicators()
-    #model.clean_data()
-    model.split_data()
-    model.train_model()
-    mse, mae, rmse = model.evaluate_model()
-    print("Evaluation for ElasticNet Model:")
-    print("Mean Squared Error:", mse)
-    print("Mean Absolute Error:", mae)
-    print("Root Mean Squared Error:", rmse)
-    mse, mae, rmse, best_estimator = model.hyperparameter_tuning()
-    print("Evaluation for best estimation hyperparameters:")
-    print("Mean Squared Error:", mse)
-    print("Mean Absolute Error:", mae)
-    print("Root Mean Squared Error:", rmse)
-    print("Best Estimator:", best_estimator)
 
 # In[ ]:
 
