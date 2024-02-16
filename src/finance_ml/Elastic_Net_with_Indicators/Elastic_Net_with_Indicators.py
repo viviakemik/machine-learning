@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[4]:
 import sys
 sys.path.append('../')
 
@@ -91,8 +90,6 @@ class ElasticNetModel:
         best_estimator = elastic_cv.best_estimator_
         return mse, mae, rmse, best_estimator
 
-
-# In[ ]:
 
 
 
