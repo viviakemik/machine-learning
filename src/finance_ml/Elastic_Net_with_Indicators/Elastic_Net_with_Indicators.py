@@ -81,7 +81,7 @@ class ElasticNetModel:
         return mse, mae, rmse, best_estimator
 
 if __name__ == "__main__":
-    data_file = 'KBWY_2020-04-07_2022-04-06.parquet'
+    data_file = './data/real_estate/KBWY_2020-04-07_2022-04-06.parquet'
     model = ElasticNetModel(data_file)
     model.load_data()
     model.clean_data()
@@ -100,7 +100,6 @@ if __name__ == "__main__":
     print("Mean Absolute Error:", mae)
     print("Root Mean Squared Error:", rmse)
     print("Best Estimator:", best_estimator)
-
 
 # In[ ]:
 
