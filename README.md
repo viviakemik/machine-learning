@@ -217,7 +217,6 @@ Once you've completed your contribution and assured:
 - you have a test file that asserts your code behaves as intended
 - you pass all tests, including those of other test files
 
-you may make a pull resquest (PR) from the remote branch to integrate your code into main. Add one of FabioMMaia or AFumis as reviewers, and if necessary make a short description. Once approved, your code will be available for others to use in their own contributions.
-
+you may make a pull resquest (PR) from the remote branch to integrate your code into main. Add one of FabioMMaia or AFumis as reviewers, and if necessary make a short description. Once approved, your code will be available for others to use in their own contributions..
 
 
