@@ -1,0 +1,1 @@
+Acesso ao google colab com todos os gráficos interativos: https://colab.research.google.com/drive/1LVe-hDOCkAl3qdoY9L5ogbt4vM6zNt_M?usp=sharing
